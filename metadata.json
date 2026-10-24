@@ -1,0 +1,6 @@
+{
+  "name": "GemmaHausa - English to Natural Hausa AI Translator",
+  "description": "Natural English-to-Hausa translation powered by Gemma 4 with cultural context, regional variants, and dual API/Ollama support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
