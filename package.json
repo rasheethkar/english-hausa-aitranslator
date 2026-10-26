@@ -9,6 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:smoke": "tsx scripts/smoke-test.ts",
+    "test:smoke:fulfulde": "TARGET_LANG=fulfulde tsx scripts/smoke-test.ts",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },

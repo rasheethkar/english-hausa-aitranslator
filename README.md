@@ -1,121 +1,50 @@
-# GemmaHausa - English to Natural Hausa AI Translator
+# GemmaTranslate - Pan-Nigerian & West African AI Translation Hub
 
-A simple, fast web application that translates English into natural, culturally accurate Latin-script Hausa (**Boko**). It captures regional variations (such as Kano and Sokoto dialects), local idioms, and cultural etiquette notes.
-
-Powered by **Gemma 4** through Google AI Studio (Gemini API) with an instant local offline fallback via **Ollama**.
+A fast, comprehensive web application powered by **Gemma 4** through Google AI Studio (with local **Ollama** fallback) translating bidirectionally across the major languages of Nigeria and West Africa: **Hausa (Boko)**, **Fulfulde (Fula / Pulaar)**, **Yoruba (Èdè Yorùbá)**, **Igbo (Asụsụ Igbo)**, and **English**.
 
 ---
 
-## 🌟 What It Does
+## 🌟 New Features Built in this Update
 
-- **Natural Latin-Script Hausa (Boko)**: Generates grammatically correct Hausa with special hooked characters (`ɓ`, `ɗ`, `ƙ`, `'y`).
-- **Cultural & Idiom Intelligence**: Rather than word-for-word translation, it translates the real meaning and matches English sayings with authentic Hausa idioms.
-- **Regional Variations**: Shows dialect alternatives (e.g. Kano Eastern Standard vs. Sokoto Western Hausa).
-- **Phonetic & Tone Guide**: Provides pronunciation guidance for English speakers and language learners.
-- **Dual Engine**: Use Google AI Studio in the cloud, or run completely offline with Ollama on your computer.
+1. **Complete Nigerian Language Hub**:
+   - **Hausa (Boko)**: Hooked letters (`ɓ`, `ɗ`, `ƙ`, `'y`), Kano/Sokoto dialects, *lafiya* / *addu'a* context.
+   - **Fulfulde (Pulaar)**: Special letters (`ɓ`, `ɗ`, `ƴ`, `ŋ`), Adamawa/Fouta dialects, *Pulaaku* moral code & *Jam* peace greetings.
+   - **Yoruba (Èdè Yorùbá)**: Sub-dots (`ẹ`, `ọ`, `ṣ`), tonal accents (high `á`, low `à`), *Ọmọlúwàbí* etiquette, *Ẹ ku...* honorific greetings.
+   - **Igbo (Asụsụ Igbo)**: Sub-dotted vowels (`ị`, `ọ`, `ụ`), nasal `ṅ`, Central/Onitsha dialects, *Onye kwe chi ya ekwe* philosophy.
 
----
+2. **🎙️ Voice Input (Speech-to-Text)**:
+   - Click the microphone icon in the input box to speak directly in English or local African languages.
+   - Uses browser Web Speech Recognition with animated pulsing feedback.
 
-## 📋 Quick Setup
+3. **🪟 Side-by-Side Dual Comparison Mode**:
+   - Switch to the **Dual Compare** tab to translate one English sentence into **Hausa, Fulfulde, Yoruba, and Igbo simultaneously**.
+   - Compare how all major Nigerian cultures express the identical thought side-by-side.
 
-### 1. Install Dependencies
-```bash
-npm install
-```
+4. **🗂️ Phrasebook & Translation History (LocalStorage)**:
+   - Every translation is automatically saved in your browser history.
+   - Click the **Star icon** to bookmark phrases into your personal phrasebook.
+   - **Export Button**: Download your phrasebook as a study text file.
+   - 1-click **Open** to restore any previous translation back into the translator.
 
-### 2. Configure Environment
-Copy the example environment file:
-```bash
-cp .env.example .env
-```
-
-Your `.env` file should look like this:
-```env
-# PROVIDER: 'api' (Google AI Studio) or 'local' (Ollama)
-PROVIDER=api
-
-# Gemini API key (from Google AI Studio: https://aistudio.google.com/)
-GEMINI_API_KEY="your-actual-api-key"
-
-# Gemma 4 model ID
-GEMMA_API_MODEL="gemma-4-31b-it"
-
-# Ollama settings (used when PROVIDER=local)
-OLLAMA_BASE_URL="http://localhost:11434"
-OLLAMA_MODEL="gemma4:e2b"
-```
+5. **🏆 Cultural Quiz & Practice Flashcards**:
+   - Test your knowledge with interactive 5-question cultural etiquette quizzes covering Hausa, Fulfulde, Yoruba, and Igbo proverbs, hooked letters, and traditions.
+   - Immediate feedback and cultural explanations for every question.
 
 ---
 
 ## 🚀 How to Run
 
-### Option A: Run with Google AI Studio (API)
-This uses Google's high-speed cloud with Gemma 4 (`gemma-4-31b-it`).
-
-1. In `.env`, ensure:
-   ```env
-   PROVIDER=api
-   GEMINI_API_KEY=your_key_here
-   ```
-2. Start the app:
-   ```bash
-   npm run dev
-   ```
-3. Open your browser at `http://localhost:3000`.
-
----
-
-### Option B: Run with Ollama (Local & Offline)
-This runs Gemma 4 locally on your machine without sending any data over the internet.
-
-1. Install [Ollama](https://ollama.com) on your computer.
-2. Download and run the Gemma 4 model:
-   ```bash
-   ollama run gemma4:e2b
-   ```
-3. In `.env`, set:
-   ```env
-   PROVIDER=local
-   ```
-4. Start the app:
-   ```bash
-   npm run dev
-   ```
-5. Open your browser at `http://localhost:3000`.
-
----
-
-## 🧪 Run the Smoke Test
-
-The smoke test sends a realistic sample phrase through your currently selected provider (`PROVIDER=api` or `PROVIDER=local`), verifies the translation and cultural notes, and prints **PASS** or **FAIL**:
-
 ```bash
-npm run test:smoke
+# Start development server
+npm run dev
 ```
 
-Example output:
-```
-==================================================
-🚀 Starting Gemma 4 Hausa Translation Smoke Test
-Provider : API
-Model    : gemma-4-31b-it
-...
-✅ GEMMA 4 TRANSLATION SMOKE TEST: PASS
-==================================================
-PASS
-```
-
-To test the local Ollama provider specifically:
-```bash
-PROVIDER=local npm run test:smoke
-```
+Open your browser at `http://localhost:3000`.
 
 ---
 
-## 💡 Quick Tips for Hausa Pronunciation (Boko Letters)
+## 🧪 Smoke Test Commands
 
-Hausa uses special Latin letters that change the meaning of words:
-- **`ɓ`** (B with hook): Glottalized 'b' (produced with an inward gulp of air).
-- **`ɗ`** (D with hook): Glottalized 'd'.
-- **`ƙ`** (K with hook): Sharp, emphatic 'k' sound produced at the back of the throat.
-- **`'y`**: Glottalized 'y' sound.
+- **Hausa Smoke Test:** `npm run test:smoke`
+- **Fulfulde Smoke Test:** `npm run test:smoke:fulfulde`
+- **Yoruba / Igbo:** `TARGET_LANG=yoruba npm run test:smoke` or `TARGET_LANG=igbo npm run test:smoke`

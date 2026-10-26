@@ -12,6 +12,32 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <script>
+      // Suppress WebSocket and HMR connection errors in AI Studio iframe environment
+      window.addEventListener('error', function(event) {
+        var msg = (event && (event.message || (event.error && event.error.message))) || '';
+        var file = (event && event.filename) || '';
+        if (
+          msg.indexOf('WebSocket') !== -1 ||
+          msg.indexOf('createWebSocketModuleRunnerTransport') !== -1 ||
+          file.indexOf('@vite/client') !== -1
+        ) {
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+          if (event.preventDefault) event.preventDefault();
+          return true;
+        }
+      }, true);
+
+      window.addEventListener('unhandledrejection', function(event) {
+        var reason = (event && event.reason) || '';
+        var str = String(reason.message || reason);
+        if (str.indexOf('WebSocket') !== -1 || str.indexOf('@vite/client') !== -1) {
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+          if (event.preventDefault) event.preventDefault();
+          return true;
+        }
+      }, true);
+    </script>
   </head>
   <body class="bg-slate-950 text-slate-100 antialiased min-h-screen">
     <div id="root"></div>
