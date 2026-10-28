@@ -32,6 +32,7 @@ export interface TranslationResult {
   providerUsed: 'api' | 'local';
   modelUsed: string;
   timestamp: string;
+  latencyMs?: number;
 }
 
 export interface DualComparisonItem {
@@ -52,6 +53,7 @@ export interface DualComparisonResult {
   providerUsed: 'api' | 'local';
   modelUsed: string;
   timestamp: string;
+  latencyMs?: number;
 }
 
 export interface TranslateOptions {
@@ -103,11 +105,11 @@ export function normalizeOllamaUrl(rawUrl?: string): string {
 
 export function getProviderStatus(): ProviderStatus {
   const activeProvider = (process.env.PROVIDER?.toLowerCase() === 'local' ? 'local' : 'api') as 'api' | 'local';
-  const apiModel = process.env.GEMMA_API_MODEL || 'gemma-4-26b-a4b-it';
+  const apiModel = process.env.GEMMA_API_MODEL || 'gemini-3.8-flash';
   return {
     activeProvider,
     apiModel,
-    availableApiModels: ['gemma-4-26b-a4b-it', 'gemma-4-31b-it'],
+    availableApiModels: ['gemini-3.8-flash', 'gemma-4-26b-a4b-it', 'gemma-4-31b-it'],
     isApiKeyConfigured: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY'),
     ollamaBaseUrl: normalizeOllamaUrl(process.env.OLLAMA_BASE_URL),
     ollamaModel: process.env.OLLAMA_MODEL || 'gemma4:e2b',
@@ -400,8 +402,8 @@ async function translateWithGeminiApi(
 
   const prompt = buildTranslationPrompt(text, sourceLanguage, targetLanguage, tonePreference, targetAudience);
 
-  const baseModel = preferredModel || process.env.GEMMA_API_MODEL || 'gemma-4-26b-a4b-it';
-  const alternativeModel = baseModel === 'gemma-4-26b-a4b-it' ? 'gemma-4-31b-it' : 'gemma-4-26b-a4b-it';
+  const baseModel = preferredModel || process.env.GEMMA_API_MODEL || 'gemini-3.8-flash';
+  const alternativeModel = baseModel === 'gemini-3.8-flash' ? 'gemma-4-26b-a4b-it' : 'gemini-3.8-flash';
   const modelsToTry = [baseModel, alternativeModel];
 
   let lastError: any = null;
@@ -525,6 +527,7 @@ export async function translateToHausa(
   text: string,
   options?: TranslateOptions
 ): Promise<TranslationResult> {
+  const startTime = Date.now();
   const trimmed = text.trim();
   if (!trimmed) {
     throw new Error('Please provide text to translate.');
@@ -552,6 +555,7 @@ export async function translateToHausa(
       providerUsed: 'local',
       modelUsed,
       timestamp,
+      latencyMs: Date.now() - startTime,
     };
   }
 
@@ -570,6 +574,7 @@ export async function translateToHausa(
     providerUsed: 'api',
     modelUsed,
     timestamp,
+    latencyMs: Date.now() - startTime,
   };
 }
 
@@ -583,6 +588,7 @@ export async function compareLanguages(
   targetLanguages: LanguageCode[] = ['hausa', 'fulfulde', 'yoruba', 'igbo'],
   options?: TranslateOptions
 ): Promise<DualComparisonResult> {
+  const startTime = Date.now();
   const trimmed = text.trim();
   if (!trimmed) {
     throw new Error('Please provide text to compare.');
@@ -619,6 +625,7 @@ export async function compareLanguages(
       providerUsed: options?.provider || status.activeProvider,
       modelUsed: status.apiModel,
       timestamp,
+      latencyMs: Date.now() - startTime,
     };
   }
 
@@ -682,6 +689,7 @@ Return ONLY valid JSON.`;
       providerUsed: 'api',
       modelUsed: modelToUse,
       timestamp,
+      latencyMs: Date.now() - startTime,
     };
   }
 
@@ -724,6 +732,7 @@ Return ONLY valid JSON.`;
       providerUsed: 'api',
       modelUsed: modelToUse,
       timestamp,
+      latencyMs: Date.now() - startTime,
     };
   } catch {
     // If parse fails, run sequential
@@ -748,6 +757,7 @@ Return ONLY valid JSON.`;
       providerUsed: 'api',
       modelUsed: modelToUse,
       timestamp,
+      latencyMs: Date.now() - startTime,
     };
   }
 }

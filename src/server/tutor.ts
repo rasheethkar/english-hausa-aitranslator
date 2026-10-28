@@ -419,8 +419,8 @@ Return ONLY the raw JSON object.`;
     httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
   });
 
-  const baseModel = modelOverride || process.env.GEMMA_API_MODEL || 'gemma-4-26b-a4b-it';
-  const alternativeModel = baseModel === 'gemma-4-26b-a4b-it' ? 'gemma-4-31b-it' : 'gemma-4-26b-a4b-it';
+  const baseModel = modelOverride || process.env.GEMMA_API_MODEL || 'gemini-3.8-flash';
+  const alternativeModel = baseModel === 'gemini-3.8-flash' ? 'gemma-4-26b-a4b-it' : 'gemini-3.8-flash';
   const modelsToTry = [baseModel, alternativeModel];
 
   // Format conversation history for prompt (limit to last 6 messages to keep tokens focused)

@@ -27,9 +27,12 @@ import {
   Layers,
   Award,
   ChevronRight,
+  ChevronDown,
   GraduationCap,
   Send,
-  MessageSquare
+  MessageSquare,
+  Timer,
+  Clock
 } from 'lucide-react';
 
 export type LanguageCode = 'english' | 'hausa' | 'fulfulde' | 'yoruba' | 'igbo';
@@ -60,6 +63,7 @@ interface TranslationResult {
   providerUsed: 'api' | 'local';
   modelUsed: string;
   timestamp: string;
+  latencyMs?: number;
 }
 
 interface DualComparisonItem {
@@ -80,6 +84,7 @@ interface DualComparisonResult {
   providerUsed: 'api' | 'local';
   modelUsed: string;
   timestamp: string;
+  latencyMs?: number;
 }
 
 interface HistoryItem {
@@ -92,6 +97,7 @@ interface HistoryItem {
   pronunciationGuide?: string;
   culturalNotes?: string;
   starred: boolean;
+  latencyMs?: number;
 }
 
 interface QuizQuestion {
@@ -138,13 +144,237 @@ interface SampleItem {
   audience: string;
 }
 
-const LANGUAGE_CONFIG: Record<LanguageCode, { label: string; flag: string; native: string; speechCode: string }> = {
-  english: { label: 'English', flag: '🇬🇧', native: 'English', speechCode: 'en-US' },
-  hausa: { label: 'Hausa', flag: '🇳🇬', native: 'Harshen Hausa (Boko)', speechCode: 'ha-NG' },
-  fulfulde: { label: 'Fulfulde', flag: '🌍', native: 'Fulfulde (Pulaar)', speechCode: 'ff-NG' },
-  yoruba: { label: 'Yoruba', flag: '🇳🇬', native: 'Èdè Yorùbá', speechCode: 'yo-NG' },
-  igbo: { label: 'Igbo', flag: '🇳🇬', native: 'Asụsụ Igbo', speechCode: 'ig-NG' },
+interface LanguageDetail {
+  label: string;
+  flag: string;
+  native: string;
+  speechCode: string;
+  region: string;
+  description: string;
+}
+
+const LANGUAGE_CONFIG: Record<LanguageCode, LanguageDetail> = {
+  english: {
+    label: 'English',
+    flag: '🇬🇧',
+    native: 'English',
+    speechCode: 'en-US',
+    region: 'International lingua franca',
+    description: 'Standard Global English',
+  },
+  hausa: {
+    label: 'Hausa',
+    flag: '🇳🇬',
+    native: 'Harshen Hausa',
+    speechCode: 'ha-NG',
+    region: 'Northern Nigeria, Niger & Sahel (50M+)',
+    description: 'Boko Latin script with hooked letters (ɓ, ɗ, ƙ, \'y)',
+  },
+  fulfulde: {
+    label: 'Fulfulde',
+    flag: '🌍',
+    native: 'Fulfulde (Pulaar)',
+    speechCode: 'ff-NG',
+    region: 'West & Central Africa (Fulani)',
+    description: 'Implosives (ɓ, ɗ, ƴ) and velar nasal (ŋ)',
+  },
+  yoruba: {
+    label: 'Yoruba',
+    flag: '🇳🇬',
+    native: 'Èdè Yorùbá',
+    speechCode: 'yo-NG',
+    region: 'Southwestern Nigeria & Diaspora',
+    description: 'Tone marks (á, à, é, è, ó, ò) & sub-dots (ẹ, ọ, ṣ)',
+  },
+  igbo: {
+    label: 'Igbo',
+    flag: '🇳🇬',
+    native: 'Asụsụ Igbo',
+    speechCode: 'ig-NG',
+    region: 'Southeastern Nigeria',
+    description: 'Underdot vowel harmony (ị, ọ, ụ) & nasal (ṅ)',
+  },
 };
+
+interface LanguageDropdownProps {
+  label: string;
+  value: LanguageCode;
+  onChange: (value: LanguageCode) => void;
+  allowedLanguages?: LanguageCode[];
+  disabledLanguage?: LanguageCode;
+  className?: string;
+  badge?: string;
+}
+
+function LanguageDropdown({
+  label,
+  value,
+  onChange,
+  allowedLanguages = ['english', 'hausa', 'fulfulde', 'yoruba', 'igbo'],
+  disabledLanguage,
+  className = '',
+  badge,
+}: LanguageDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const selected = LANGUAGE_CONFIG[value] || LANGUAGE_CONFIG.english;
+
+  // Close on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // Close on Escape
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
+  return (
+    <div ref={dropdownRef} className={`relative ${className}`}>
+      {label && (
+        <div className="flex items-center justify-between mb-1.5 px-0.5">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+            <Globe2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{label}</span>
+          </span>
+          {badge && (
+            <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              {badge}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Main Trigger Button */}
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={`w-full bg-slate-950 hover:bg-slate-900/90 border transition-all rounded-xl p-3 flex items-center justify-between text-left cursor-pointer shadow-sm group ${
+          isOpen
+            ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-slate-900'
+            : 'border-slate-800 hover:border-slate-700'
+        }`}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <div className="flex items-center space-x-3 overflow-hidden">
+          <span className="text-2xl shrink-0 group-hover:scale-110 transition-transform">
+            {selected.flag}
+          </span>
+          <div className="min-w-0">
+            <div className="flex items-center space-x-2">
+              <span className="font-bold text-sm text-white group-hover:text-emerald-300 transition-colors truncate">
+                {selected.label}
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700 font-medium shrink-0">
+                {selected.native}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 truncate mt-0.5">
+              {selected.region}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-1 pl-2 text-slate-400 group-hover:text-emerald-400 shrink-0">
+          <span className="text-xs font-medium text-slate-400 hidden sm:inline mr-1">Select</span>
+          <ChevronDown
+            className={`w-4 h-4 transition-transform duration-200 ${
+              isOpen ? 'rotate-180 text-emerald-400' : ''
+            }`}
+          />
+        </div>
+      </button>
+
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl animate-in fade-in duration-150">
+          <div className="p-2.5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between text-[11px] text-slate-400">
+            <span className="font-semibold text-slate-300">Choose Language:</span>
+            <span className="text-[10px] text-slate-500">{allowedLanguages.length} supported</span>
+          </div>
+
+          <div className="p-1.5 max-h-72 overflow-y-auto space-y-1">
+            {allowedLanguages.map((code) => {
+              const item = LANGUAGE_CONFIG[code];
+              const isSelected = value === code;
+              const isDisabled = disabledLanguage === code;
+
+              return (
+                <button
+                  key={code}
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => {
+                    onChange(code);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-500/15 border border-emerald-500/50 text-white'
+                      : isDisabled
+                      ? 'opacity-40 cursor-not-allowed bg-transparent'
+                      : 'hover:bg-slate-800 text-slate-300 hover:text-white border border-transparent'
+                  }`}
+                  role="option"
+                  aria-selected={isSelected}
+                >
+                  <div className="flex items-center space-x-3 overflow-hidden">
+                    <span className="text-2xl shrink-0">{item.flag}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center space-x-2">
+                        <span className={`font-bold text-sm ${isSelected ? 'text-emerald-400' : 'text-slate-100'}`}>
+                          {item.label}
+                        </span>
+                        <span className="text-[10px] text-slate-400 truncate">
+                          ({item.native})
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                        {item.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 pl-2">
+                    {isSelected && (
+                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow">
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatLatency(ms?: number): string {
+  if (ms === undefined || ms === null || isNaN(ms)) return '—';
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
+}
 
 export default function App() {
   // Navigation View: 'translate' | 'compare' | 'tutor' | 'history' | 'quiz'
@@ -174,6 +404,7 @@ export default function App() {
 
   // Multi-Comparison State
   const [compareInput, setCompareInput] = useState('');
+  const [compareTargets, setCompareTargets] = useState<LanguageCode[]>(['hausa', 'fulfulde', 'yoruba', 'igbo']);
   const [compareLoading, setCompareLoading] = useState(false);
   const [compareResult, setCompareResult] = useState<DualComparisonResult | null>(null);
 
@@ -487,6 +718,7 @@ export default function App() {
 
     setIsLoading(true);
     setError(null);
+    const reqStartTime = performance.now();
 
     try {
       const activeProvider = providerOverride || status?.activeProvider || 'api';
@@ -509,7 +741,11 @@ export default function App() {
         throw new Error(data.error || 'Failed to translate. Please check your provider settings.');
       }
 
-      const resData: TranslationResult = data.data;
+      const clientDuration = Math.round(performance.now() - reqStartTime);
+      const resData: TranslationResult = {
+        ...data.data,
+        latencyMs: typeof data.data?.latencyMs === 'number' ? data.data.latencyMs : clientDuration,
+      };
       setResult(resData);
 
       // Save into history
@@ -523,6 +759,7 @@ export default function App() {
         pronunciationGuide: resData.pronunciationGuide,
         culturalNotes: resData.culturalNotes,
         starred: false,
+        latencyMs: resData.latencyMs,
       };
 
       setHistory((prev) => [newHistoryItem, ...prev.slice(0, 49)]);
@@ -538,6 +775,7 @@ export default function App() {
     if (e) e.preventDefault();
     if (!compareInput.trim() || compareLoading) return;
 
+    const compStartTime = performance.now();
     setCompareLoading(true);
     try {
       const activeProvider = providerOverride || status?.activeProvider || 'api';
@@ -548,7 +786,7 @@ export default function App() {
           text: compareInput.trim(),
           provider: activeProvider,
           sourceLanguage: 'english',
-          targetLanguages: ['hausa', 'fulfulde', 'yoruba', 'igbo'],
+          targetLanguages: compareTargets.length > 0 ? compareTargets : ['hausa', 'fulfulde', 'yoruba', 'igbo'],
           tonePreference,
           targetAudience,
         }),
@@ -556,7 +794,11 @@ export default function App() {
 
       const data = await response.json();
       if (data.success && data.data) {
-        setCompareResult(data.data);
+        const clientDuration = Math.round(performance.now() - compStartTime);
+        setCompareResult({
+          ...data.data,
+          latencyMs: typeof data.data?.latencyMs === 'number' ? data.data.latencyMs : clientDuration,
+        });
       }
     } catch (err) {
       console.error('Comparison error:', err);
@@ -671,7 +913,7 @@ export default function App() {
   const activeModelDisplay =
     activeProviderDisplay === 'local'
       ? status?.ollamaModel || 'gemma4:e2b'
-      : status?.apiModel || 'gemma-4-26b-a4b-it';
+      : status?.apiModel || 'gemini-3.8-flash';
 
   // Determine keyboard helper characters based on source or target language
   const inputLetters =
@@ -887,33 +1129,34 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Language Selection Buttons */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-800/80">
-                {(['hausa', 'fulfulde', 'yoruba', 'igbo'] as LanguageCode[]).map((code) => {
-                  const isSelected = tutorLanguage === code;
-                  return (
-                    <button
-                      key={code}
-                      type="button"
-                      onClick={() => setTutorLanguage(code)}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center space-x-3 ${
-                        isSelected
-                          ? 'bg-emerald-500/10 border-emerald-500/80 shadow-md shadow-emerald-500/10'
-                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
-                      }`}
-                    >
-                      <span className="text-2xl">{LANGUAGE_CONFIG[code].flag}</span>
-                      <div className="overflow-hidden">
-                        <div className={`font-bold text-xs truncate ${isSelected ? 'text-emerald-400' : 'text-slate-200'}`}>
-                          {LANGUAGE_CONFIG[code].label}
-                        </div>
-                        <div className="text-[10px] text-slate-400 truncate">
-                          {LANGUAGE_CONFIG[code].native}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+              {/* Selective Tutor Language Selector */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pt-4 border-t border-slate-800/80 items-center">
+                <div className="md:col-span-5">
+                  <LanguageDropdown
+                    label="Language You Want to Learn"
+                    badge="Interactive Study"
+                    value={tutorLanguage}
+                    allowedLanguages={['hausa', 'fulfulde', 'yoruba', 'igbo']}
+                    onChange={(code) => setTutorLanguage(code)}
+                  />
+                </div>
+
+                <div className="md:col-span-7 bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 flex items-center space-x-3.5">
+                  <span className="text-3xl shrink-0">{LANGUAGE_CONFIG[tutorLanguage].flag}</span>
+                  <div className="min-w-0">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-sm text-white">
+                        {LANGUAGE_CONFIG[tutorLanguage].label} Teacher
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-medium">
+                        {LANGUAGE_CONFIG[tutorLanguage].native}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 truncate mt-0.5">
+                      {LANGUAGE_CONFIG[tutorLanguage].description}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1153,75 +1396,50 @@ export default function App() {
         {/* ================= TRANSLATOR TAB ================= */}
         {activeTab === 'translate' && (
           <div className="space-y-6">
-            {/* Direction Selector Bar */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                {/* Source Language */}
-                <div className="w-full sm:w-auto flex-1 flex items-center space-x-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 hidden md:inline">
-                    From:
-                  </span>
-                  <div className="grid grid-cols-5 gap-1 w-full">
-                    {(['english', 'hausa', 'fulfulde', 'yoruba', 'igbo'] as LanguageCode[]).map((code) => (
-                      <button
-                        key={`src-${code}`}
-                        type="button"
-                        onClick={() => {
-                          setSourceLanguage(code);
-                          if (targetLanguage === code) {
-                            setTargetLanguage(code === 'english' ? 'hausa' : 'english');
-                          }
-                        }}
-                        className={`py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1 transition-all cursor-pointer ${
-                          sourceLanguage === code
-                            ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                            : 'text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        <span>{LANGUAGE_CONFIG[code].flag}</span>
-                        <span className="truncate">{LANGUAGE_CONFIG[code].label}</span>
-                      </button>
-                    ))}
-                  </div>
+            {/* Selective Language Direction Bar */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+                {/* Source Language Selector */}
+                <div className="flex-1">
+                  <LanguageDropdown
+                    label="Translate From"
+                    badge="Source"
+                    value={sourceLanguage}
+                    onChange={(newLang) => {
+                      setSourceLanguage(newLang);
+                      if (targetLanguage === newLang) {
+                        setTargetLanguage(newLang === 'english' ? 'hausa' : 'english');
+                      }
+                    }}
+                  />
                 </div>
 
                 {/* Swap Button */}
-                <button
-                  type="button"
-                  onClick={handleSwapLanguages}
-                  className="p-2.5 rounded-xl bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 border border-slate-700 transition-all cursor-pointer shadow-md group shrink-0"
-                  title="Swap languages"
-                >
-                  <ArrowLeftRight className="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" />
-                </button>
+                <div className="flex items-center justify-center pt-1 sm:pt-5">
+                  <button
+                    type="button"
+                    onClick={handleSwapLanguages}
+                    className="p-3 rounded-xl bg-slate-950 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-slate-800 hover:border-emerald-400 transition-all cursor-pointer shadow-lg group active:scale-95 shrink-0"
+                    title="Swap Source & Target languages"
+                    aria-label="Swap Languages"
+                  >
+                    <ArrowLeftRight className="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" />
+                  </button>
+                </div>
 
-                {/* Target Language */}
-                <div className="w-full sm:w-auto flex-1 flex items-center space-x-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 hidden md:inline">
-                    To:
-                  </span>
-                  <div className="grid grid-cols-5 gap-1 w-full">
-                    {(['hausa', 'fulfulde', 'yoruba', 'igbo', 'english'] as LanguageCode[]).map((code) => (
-                      <button
-                        key={`tgt-${code}`}
-                        type="button"
-                        onClick={() => {
-                          setTargetLanguage(code);
-                          if (sourceLanguage === code) {
-                            setSourceLanguage(code === 'hausa' ? 'english' : 'hausa');
-                          }
-                        }}
-                        className={`py-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1 transition-all cursor-pointer ${
-                          targetLanguage === code
-                            ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                            : 'text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        <span>{LANGUAGE_CONFIG[code].flag}</span>
-                        <span className="truncate">{LANGUAGE_CONFIG[code].label}</span>
-                      </button>
-                    ))}
-                  </div>
+                {/* Target Language Selector */}
+                <div className="flex-1">
+                  <LanguageDropdown
+                    label="Translate To"
+                    badge="Target"
+                    value={targetLanguage}
+                    onChange={(newLang) => {
+                      setTargetLanguage(newLang);
+                      if (sourceLanguage === newLang) {
+                        setSourceLanguage(newLang === 'hausa' ? 'english' : 'hausa');
+                      }
+                    }}
+                  />
                 </div>
               </div>
             </div>
@@ -1411,13 +1629,22 @@ export default function App() {
                   <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-5">
                     {/* Header with language indicator, tone, copy & speech */}
                     <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
                           {LANGUAGE_CONFIG[result.targetLanguage || targetLanguage].label} Output ({LANGUAGE_CONFIG[result.targetLanguage || targetLanguage].flag})
                         </span>
                         <span className="px-2 py-0.5 text-[10px] font-medium bg-slate-800 text-slate-300 rounded-full border border-slate-700">
                           {result.toneAndRegister}
                         </span>
+                        {result.latencyMs !== undefined && (
+                          <span
+                            className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20 flex items-center space-x-1"
+                            title="Roundtrip Translation Execution Time"
+                          >
+                            <Timer className="w-3 h-3 text-emerald-400" />
+                            <span>{formatLatency(result.latencyMs)}</span>
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center space-x-1.5">
@@ -1521,17 +1748,47 @@ export default function App() {
                     )}
 
                     {/* Engine Metadata Footer */}
-                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
-                      <div className="flex items-center space-x-2">
-                        <span>Engine:</span>
-                        <span className="text-slate-300 font-medium">
-                          {result.providerUsed === 'api' ? 'Google AI Studio API' : 'Local Ollama'}
-                        </span>
-                        <span>•</span>
-                        <span className="font-mono text-emerald-400/80">{result.modelUsed}</span>
+                    <div className="pt-3.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-400">
+                      <div className="flex items-center space-x-2.5 flex-wrap gap-y-1.5">
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-slate-500">Engine:</span>
+                          <span className="text-slate-200 font-semibold">
+                            {result.providerUsed === 'api' ? 'Google AI Studio' : 'Local Ollama'}
+                          </span>
+                          <span className="text-slate-600">•</span>
+                          <span className="font-mono text-emerald-400 font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                            {result.modelUsed}
+                          </span>
+                        </div>
+
+                        <span className="text-slate-600 hidden sm:inline">•</span>
+
+                        {/* Translation Time / Latency Metric */}
+                        <div
+                          className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] shadow-sm"
+                          title={`Total translation execution latency: ${result.latencyMs ?? 0}ms`}
+                        >
+                          <Timer className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span className="text-slate-400 font-normal">Translation Time:</span>
+                          <span
+                            className={`font-mono font-bold ${
+                              (result.latencyMs ?? 0) < 1500
+                                ? 'text-emerald-400'
+                                : (result.latencyMs ?? 0) < 4000
+                                ? 'text-teal-300'
+                                : 'text-amber-400'
+                            }`}
+                          >
+                            {formatLatency(result.latencyMs)}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        {new Date(result.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+
+                      <div className="flex items-center space-x-1.5 text-slate-500 text-[11px]">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>
+                          {new Date(result.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1582,6 +1839,66 @@ export default function App() {
                 />
               </div>
 
+              {/* Selective Target Languages */}
+              <div className="space-y-2 pt-1 border-t border-slate-800/80">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-300 flex items-center space-x-1.5">
+                    <Globe2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Select Languages to Compare ({compareTargets.length}):</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (compareTargets.length === 4) {
+                        setCompareTargets(['hausa']);
+                      } else {
+                        setCompareTargets(['hausa', 'fulfulde', 'yoruba', 'igbo']);
+                      }
+                    }}
+                    className="text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer text-[11px] font-medium"
+                  >
+                    {compareTargets.length === 4 ? 'Single (Hausa only)' : 'Select All (4 Languages)'}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {(['hausa', 'fulfulde', 'yoruba', 'igbo'] as LanguageCode[]).map((code) => {
+                    const isSelected = compareTargets.includes(code);
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            if (compareTargets.length > 1) {
+                              setCompareTargets(compareTargets.filter((c) => c !== code));
+                            }
+                          } else {
+                            setCompareTargets([...compareTargets, code]);
+                          }
+                        }}
+                        className={`p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer border ${
+                          isSelected
+                            ? 'bg-emerald-500/15 border-emerald-500/60 text-white shadow-sm'
+                            : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2 truncate">
+                          <span className="text-lg">{LANGUAGE_CONFIG[code].flag}</span>
+                          <span className="truncate">{LANGUAGE_CONFIG[code].label}</span>
+                        </div>
+                        {isSelected ? (
+                          <span className="w-4 h-4 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0">
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          </span>
+                        ) : (
+                          <span className="w-4 h-4 rounded-full border border-slate-700 shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={compareLoading || !compareInput.trim()}
@@ -1590,11 +1907,13 @@ export default function App() {
                 {compareLoading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
-                    <span>Translating into 4 African Languages...</span>
+                    <span>Translating into Selected Languages...</span>
                   </>
                 ) : (
                   <>
-                    <span>Compare Across Hausa, Fulfulde, Yoruba & Igbo</span>
+                    <span>
+                      Compare in {compareTargets.map((c) => LANGUAGE_CONFIG[c].label).join(', ')}
+                    </span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -1603,8 +1922,9 @@ export default function App() {
 
             {/* Comparison Cards Grid */}
             {compareResult && compareResult.comparisons && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {compareResult.comparisons.map((c) => (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {compareResult.comparisons.map((c) => (
                   <div key={c.language} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3 flex flex-col justify-between">
                     <div className="space-y-3">
                       <div className="flex items-center justify-between pb-2 border-b border-slate-800">
@@ -1651,7 +1971,31 @@ export default function App() {
                   </div>
                 ))}
               </div>
-            )}
+
+              {/* Dual Compare Latency & Engine Footer */}
+              <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-xl flex flex-wrap items-center justify-between gap-2.5 text-[11px] text-slate-400">
+                <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                  <span className="text-slate-500">Engine:</span>
+                  <span className="text-slate-200 font-semibold">{compareResult.modelUsed}</span>
+                  <span className="text-slate-600">•</span>
+                  <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] shadow-sm">
+                    <Timer className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-slate-400">Multi-Translation Time:</span>
+                    <span className="font-mono font-bold text-emerald-400">
+                      {formatLatency(compareResult.latencyMs)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-1 text-slate-500 text-[11px]">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>
+                    {new Date(compareResult.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
           </div>
         )}
 
@@ -1720,7 +2064,7 @@ export default function App() {
                     className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3 transition-all hover:border-slate-700"
                   >
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 text-xs">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                         <span className="font-semibold text-emerald-400 uppercase tracking-wider text-[11px]">
                           {LANGUAGE_CONFIG[item.sourceLanguage]?.label} ➔ {LANGUAGE_CONFIG[item.targetLanguage]?.label}
                         </span>
@@ -1728,6 +2072,15 @@ export default function App() {
                         <span className="text-slate-500">
                           {new Date(item.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
+                        {item.latencyMs !== undefined && (
+                          <>
+                            <span className="text-slate-600">•</span>
+                            <span className="inline-flex items-center space-x-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                              <Timer className="w-2.5 h-2.5" />
+                              <span>{formatLatency(item.latencyMs)}</span>
+                            </span>
+                          </>
+                        )}
                       </div>
 
                       <div className="flex items-center space-x-1.5">
